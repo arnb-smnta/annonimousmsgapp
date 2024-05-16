@@ -4,4 +4,4 @@ import { authOptions } from "./options";
 
 const handler = NextAuth(authOptions);
 
-export { handler as GET, handler as POST };
+export { handler as GET, handler as POST }; //This is package specific without verbs it does not works
