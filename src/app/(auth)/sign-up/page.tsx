@@ -1,5 +1,5 @@
 "use client";
-import { useDebounceValue } from "usehooks-ts";
+import { useDebounceCallback, useDebounceValue } from "usehooks-ts";
 import React, { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 
 const Page = () => {
   const [username, setUsername] = useState("");
@@ -29,7 +30,7 @@ const Page = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const debouncedUsername = useDebounceValue(username, 500);
+  const debouncedUsername = useDebounceCallback(setUsername, 500);
   const { toast } = useToast();
   const router = useRouter();
   //zod implementation
@@ -45,14 +46,15 @@ const Page = () => {
 
   useEffect(() => {
     const checkUsernameUnique = async () => {
-      if (debouncedUsername) {
+      if (username) {
         setIsCheckingUsername(true);
         setUsernameMessage(""); //Reset message
 
         try {
           const response = await axios.get<ApiResponse>(
-            `/api/check-username-unique?username=${debouncedUsername}`
+            `/api/check-username-unique?username=${username}`
           );
+
           setUsernameMessage(response.data.message);
         } catch (error) {
           const axiosError = error as AxiosError<ApiResponse>;
@@ -65,7 +67,7 @@ const Page = () => {
       }
     };
     checkUsernameUnique();
-  }, [debouncedUsername]);
+  }, [username]);
 
   const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
     setIsSubmitting(true);
@@ -99,61 +101,93 @@ const Page = () => {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="username"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Username</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="arnab"
-                  {...field}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    setUsername(e.target.value);
-                  }}
-                />
-              </FormControl>
-              <FormDescription>Enter your username</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />{" "}
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>email</FormLabel>
-              <FormControl>
-                <Input placeholder="ghontu@gsd.com" {...field} />
-              </FormControl>
-              <FormDescription>Enter your Email</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="Password" {...field} />
-              </FormControl>
-              <FormDescription>Enter your password</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit">Submit</Button>
-      </form>
-    </Form>
+    <div className="flex justify-center items-center min-h-screen bg-gray-800">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
+        <div className="text-center">
+          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-6">
+            Join True Feedback
+          </h1>
+          <p className="mb-4">Sign up to start your anonymous adventure</p>
+        </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              name="username"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <Input
+                    {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      debouncedUsername(e.target.value);
+                    }}
+                  />
+                  {isCheckingUsername && <Loader2 className="animate-spin" />}
+                  {!isCheckingUsername && usernameMessage && (
+                    <p
+                      className={`text-sm ${
+                        usernameMessage === "Username is unique"
+                          ? "text-green-500"
+                          : "text-red-500"
+                      }`}
+                    >
+                      {usernameMessage}
+                    </p>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              name="email"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <Input {...field} name="email" />
+                  <p className="text-muted text-gray-400 text-sm">
+                    We will send you a verification code
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="password"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <Input type="password" {...field} name="password" />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Please wait
+                </>
+              ) : (
+                "Sign Up"
+              )}
+            </Button>
+          </form>
+        </Form>
+        <div className="text-center mt-4">
+          <p>
+            Already a member?{" "}
+            <Link href="/sign-in" className="text-blue-600 hover:text-blue-800">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
-
 export default Page;
