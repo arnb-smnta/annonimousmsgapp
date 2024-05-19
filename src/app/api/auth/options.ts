@@ -1,24 +1,16 @@
-//authjs works in options.ts
-//Every 3rd party additions work in options.ts
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import UserModel from "@/model/User";
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    //This behind the scenes is creating a HTML form for us what to accept and not
     CredentialsProvider({
-      id: "credentails",
+      id: "credentials",
       name: "Credentials",
       credentials: {
-        email: {
-          label: "Email",
-          type: "text",
-          placeholder: "jsmith@gmail.com",
-        },
+        email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials: any): Promise<any> {
@@ -30,15 +22,12 @@ export const authOptions: NextAuthOptions = {
               { username: credentials.identifier },
             ],
           });
-
           if (!user) {
             throw new Error("No user found with this email");
           }
-
           if (!user.isVerified) {
-            throw new Error("Please verify account before login");
+            throw new Error("Please verify your account before logging in");
           }
-
           const isPasswordCorrect = await bcrypt.compare(
             credentials.password,
             user.password
@@ -46,15 +35,24 @@ export const authOptions: NextAuthOptions = {
           if (isPasswordCorrect) {
             return user;
           } else {
-            throw new Error("Incoorect password");
+            throw new Error("Incorrect password");
           }
-        } catch (error: any) {
-          throw new Error(error);
+        } catch (err: any) {
+          throw new Error(err);
         }
       },
     }),
   ],
   callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token._id = user._id?.toString(); // Convert ObjectId to string
+        token.isVerified = user.isVerified;
+        token.isAcceptingMessages = user.isAcceptingMessages;
+        token.username = user.username;
+      }
+      return token;
+    },
     async session({ session, token }) {
       if (token) {
         session.user._id = token._id;
@@ -62,25 +60,14 @@ export const authOptions: NextAuthOptions = {
         session.user.isAcceptingMessages = token.isAcceptingMessages;
         session.user.username = token.username;
       }
-
       return session;
     },
-    async jwt({ token, user }) {
-      if (user) {
-        token._id = user._id?.toString();
-        token.isVerified = user.isVerified;
-        token.isAcceptingMessages = user.isAcceptingMessages;
-        token.username = user.username;
-      }
-
-      return token;
-    },
-  },
-  pages: {
-    signIn: "/sign-in", //We do not have to design signin page not only api but also signin page
   },
   session: {
     strategy: "jwt",
   },
-  secret: process.env.NEXT_AUTH_SECRET, //compulsary people normally forget
+  secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: "/sign-in",
+  },
 };

@@ -59,3 +59,48 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function GET(request: Request) {
+  //connect to the database
+
+  await dbConnect();
+
+  //Get the user session
+
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
+
+  //check if the user is authenticated
+
+  if (!session || !user) {
+    return Response.json(
+      new ApiResponseClass(false, "not authenticated", 401),
+      { status: 401 }
+    );
+  }
+
+  try {
+    //Retrieve the user from the DB using the ID
+
+    const foundUser = await UserModel.findById(user._id);
+
+    if (!foundUser) {
+      return Response.json(new ApiResponseClass(false, "User not found"), {
+        status: 404,
+      });
+    }
+    //return the users message acceptance status
+
+    return Response.json(
+      new ApiResponseClass(true, "Success", 200, {
+        isAcceptingMessages: foundUser.isAcceptingMessage,
+      })
+    );
+  } catch (error) {
+    console.error("Error retrieving message acceptance status:", error);
+    return Response.json(
+      { success: false, message: "Error retrieving message acceptance status" },
+      { status: 500 }
+    );
+  }
+}

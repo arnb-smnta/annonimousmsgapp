@@ -1,19 +1,11 @@
 "use client";
-import { useDebounceCallback, useDebounceValue } from "usehooks-ts";
-import React, { useEffect, useState } from "react";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import Link from "next/link";
-import { useToast } from "@/components/ui/use-toast";
-import { useRouter } from "next/navigation";
-import { signUpSchema } from "@/schemas/signupSchema";
-import axios, { AxiosError } from "axios";
-import { ApiResponse } from "@/types/ApiResponse";
+import { signIn } from "next-auth/react";
 import {
   Form,
-  FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -21,31 +13,30 @@ import {
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
 import { signInSchema } from "@/schemas/signInSchema";
-import { signIn } from "next-auth/react";
 
-const Page = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { toast } = useToast();
+export default function SignInForm() {
   const router = useRouter();
-  //zod implementation
 
-  const form = useForm({
-    resolver: zodResolver(signInSchema), //default value at first or cleanup
+  const form = useForm<z.infer<typeof signInSchema>>({
+    resolver: zodResolver(signInSchema),
     defaultValues: {
       identifier: "",
       password: "",
     },
   });
 
+  const { toast } = useToast();
   const onSubmit = async (data: z.infer<typeof signInSchema>) => {
     const result = await signIn("credentials", {
       redirect: false,
       identifier: data.identifier,
       password: data.password,
     });
+    console.log(result);
 
     if (result?.error) {
       if (result.error === "CredentialsSignin") {
@@ -117,5 +108,4 @@ const Page = () => {
       </div>
     </div>
   );
-};
-export default Page;
+}
